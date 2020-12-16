@@ -2,12 +2,35 @@ import pandas as pd
 import yahoo_fin.stock_info as si
 import dateutil.parser as dp
 import os
-import yahoo as lib
 from tqdm import tqdm
 import datetime as dt
 from collections import defaultdict
+import time
 
 #pd.set_option('mode.chained_assignment', None)
+
+def get_band(ticker, date, band_age = 20):
+    start_date = date - dt.timedelta(days=band_age)
+    try:
+        data = si.get_data(ticker, start_date=start_date, end_date=date)
+    except KeyError:
+        time.sleep(2)
+        try:
+            data = si.get_data(ticker, start_date=start_date, end_date=date)
+        except KeyError:
+            return -1
+    
+    stockprices = data.drop(columns=['open', 'high', 'low', 'close', 'volume', 'ticker'])
+    if len(data) < band_age:
+        band_age = len(data)
+    stockprices['MA'] = stockprices['adjclose'].rolling(window=band_age).mean()
+    stockprices['STD'] = stockprices['adjclose'].rolling(window=band_age).std() 
+    stockprices['Upper'] = stockprices['MA'] + (stockprices['STD'] * 2)
+    stockprices['Lower'] = stockprices['MA'] - (stockprices['STD'] * 2)
+
+    stockprices = stockprices.dropna()
+    return stockprices
+
 
 def get_expiry_from_name(c_name, ticker):
     offset = len(ticker)
@@ -68,11 +91,25 @@ for ticker in tqdm(ticker_list):
         pull_date = chain['Pull Timestamp'][0]
         chain['Expiry'] = expiry
         chain['Ticker'] = ticker
-        band_data = lib.get_band(ticker, start_date=pull_date, band_age=20)
+        
+        '''
+        band_data = get_band(ticker, pull_date, band_age=20)
+        if band_data == -1:
+            print('Yahoo_fin failed, fill data later')            
+            continue
+        if band_data.empty:
+            time.sleep(5)
+            band_data = get_band(ticker, pull_date, band_age=20)
+        if band_data.empty:
+            print('Totally empty')
+            time.sleep(2)
+            continue
         chain['MA'] = band_data['MA'][0]
         chain['STD'] = band_data['STD'][0]
         chain['Contract'] = "C"
         chain['Safe'] = chain['Strike'] > band_data['Upper'][0]
+        '''
+        
         close = get_close_price(ticker, expiry)
         chain['adjclose at expiry'] = close
         master_data = pd.concat([master_data, chain])
@@ -86,11 +123,25 @@ for ticker in tqdm(ticker_list):
         pull_date = chain['Pull Timestamp'][0]
         chain['Expiry'] = expiry
         chain['Ticker'] = ticker
-        band_data = lib.get_band(ticker, start_date=pull_date, band_age=20)
+        
+        '''
+        band_data = get_band(ticker, date=pull_date, band_age=20)
+        if band_data == -1:
+            print('Yahoo_fin failed, fill data later')        
+            continue
+        if band_data.empty:
+            time.sleep(5)
+            band_data = get_band(ticker, date=pull_date, band_age=20)
+        if band_data.empty:
+            print('Totally empty')
+            time.sleep(2)
+            continue
         chain['MA'] = band_data['MA'][0]
         chain['STD'] = band_data['STD'][0]
         chain['Contract'] = "P"
         chain['Safe'] = chain['Strike'] < band_data['Lower'][0]
+        '''
+        
         close = get_close_price(ticker, expiry)
         chain['adjclose at expiry'] = close
         master_data = pd.concat([master_data, chain])
