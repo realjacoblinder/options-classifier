@@ -79,10 +79,13 @@ def get_close_price(ticker, expiry):
 
 master_data = pd.DataFrame()
 
+# record ticker - call/put - max pull time in json file
+
 ticker_list = os.listdir('im_vol')
 for ticker in tqdm(ticker_list):
     path = 'im_vol/'+ticker
-    for file in os.listdir(path+'/calls'):        
+    for file in os.listdir(path+'/calls'):  
+        # check filename against last pull date and hour for ticker      
         chain = pd.read_csv(path+'/calls/'+file)
         chain = chain[['Contract Name','Strike', 'Last Trade Date', 'Pull Timestamp', 'Implied Volatility', 'Volume']]
         chain['Pull Timestamp'] = chain['Pull Timestamp'].apply(dp.parse)
@@ -91,7 +94,8 @@ for ticker in tqdm(ticker_list):
         pull_date = chain['Pull Timestamp'][0]
         chain['Expiry'] = expiry
         chain['Ticker'] = ticker
-        
+        chain['Days to Expiry'] = chain['Expiry'] - chain['Pull Timestamp']
+        chain['Days to Expiry'] = chain['Days to Expiry'].apply(lambda x: x.days)        
         '''
         band_data = get_band(ticker, pull_date, band_age=20)
         if band_data == -1:
@@ -106,10 +110,9 @@ for ticker in tqdm(ticker_list):
             continue
         chain['MA'] = band_data['MA'][0]
         chain['STD'] = band_data['STD'][0]
-        chain['Contract'] = "C"
         chain['Safe'] = chain['Strike'] > band_data['Upper'][0]
         '''
-        
+        chain['Contract'] = "C"
         close = get_close_price(ticker, expiry)
         chain['adjclose at expiry'] = close
         master_data = pd.concat([master_data, chain])
@@ -123,6 +126,8 @@ for ticker in tqdm(ticker_list):
         pull_date = chain['Pull Timestamp'][0]
         chain['Expiry'] = expiry
         chain['Ticker'] = ticker
+        chain['Days to Expiry'] = chain['Expiry'] - chain['Pull Timestamp']
+        chain['Days to Expiry'] = chain['Days to Expiry'].apply(lambda x: x.days)
         
         '''
         band_data = get_band(ticker, date=pull_date, band_age=20)
@@ -138,10 +143,9 @@ for ticker in tqdm(ticker_list):
             continue
         chain['MA'] = band_data['MA'][0]
         chain['STD'] = band_data['STD'][0]
-        chain['Contract'] = "P"
         chain['Safe'] = chain['Strike'] < band_data['Lower'][0]
         '''
-        
+        chain['Contract'] = "P"
         close = get_close_price(ticker, expiry)
         chain['adjclose at expiry'] = close
         master_data = pd.concat([master_data, chain])
