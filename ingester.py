@@ -6,6 +6,7 @@ from tqdm import tqdm
 import datetime as dt
 from collections import defaultdict
 import time
+import json
 
 #pd.set_option('mode.chained_assignment', None)
 
@@ -79,14 +80,24 @@ def get_close_price(ticker, expiry):
 
 master_data = pd.DataFrame()
 
+files_read = {}
+
+if os.path.exists('maxTimes.json'):
+    with open('maxTimes.json', 'r') as f:
+        files_read = json.load(f)
+
 # record ticker - call/put - max pull time in json file
 
 ticker_list = os.listdir('im_vol')
 for ticker in tqdm(ticker_list):
+    if ticker not in files_read:
+        files_read[ticker] = {}
     path = 'im_vol/'+ticker
     for file in os.listdir(path+'/calls'):  
         # check filename against last pull date and hour for ticker      
-        chain = pd.read_csv(path+'/calls/'+file)
+        f_path = path+'/calls/'+file
+        chain = pd.read_csv(f_path)
+
         chain = chain[['Contract Name','Strike', 'Last Trade Date', 'Pull Timestamp', 'Implied Volatility', 'Volume']]
         chain['Pull Timestamp'] = chain['Pull Timestamp'].apply(dp.parse)
         chain['Last Trade Date'] = chain['Last Trade Date'].apply(dp.parse)
@@ -96,6 +107,7 @@ for ticker in tqdm(ticker_list):
         chain['Ticker'] = ticker
         chain['Days to Expiry'] = chain['Expiry'] - chain['Pull Timestamp']
         chain['Days to Expiry'] = chain['Days to Expiry'].apply(lambda x: x.days)        
+        
         '''
         band_data = get_band(ticker, pull_date, band_age=20)
         if band_data == -1:
@@ -112,13 +124,21 @@ for ticker in tqdm(ticker_list):
         chain['STD'] = band_data['STD'][0]
         chain['Safe'] = chain['Strike'] > band_data['Upper'][0]
         '''
+
         chain['Contract'] = "C"
         close = get_close_price(ticker, expiry)
         chain['adjclose at expiry'] = close
         master_data = pd.concat([master_data, chain])
 
+        if 'calls' in files_read[ticker]:
+            if files_read[ticker]['calls'] < os.path.getmtime(f_path):
+                files_read[ticker]['calls'] = os.path.getmtime(f_path)
+        else:
+            files_read[ticker]['calls'] = os.path.getmtime(f_path)
+
     for file in os.listdir(path+'/puts'):
-        chain = pd.read_csv(path+'/puts/'+file)
+        f_path = path+'/puts/'+file
+        chain = pd.read_csv(f_path)
         chain = chain[['Contract Name','Strike', 'Last Trade Date', 'Pull Timestamp', 'Implied Volatility', 'Volume']]
         chain['Pull Timestamp'] = chain['Pull Timestamp'].apply(dp.parse)
         chain['Last Trade Date'] = chain['Last Trade Date'].apply(dp.parse)
@@ -145,12 +165,21 @@ for ticker in tqdm(ticker_list):
         chain['STD'] = band_data['STD'][0]
         chain['Safe'] = chain['Strike'] < band_data['Lower'][0]
         '''
+
         chain['Contract'] = "P"
         close = get_close_price(ticker, expiry)
         chain['adjclose at expiry'] = close
         master_data = pd.concat([master_data, chain])
 
+        if 'puts' in files_read[ticker]:
+            if files_read[ticker]['puts'] < os.path.getmtime(f_path):
+                files_read[ticker]['puts'] = os.path.getmtime(f_path)
+        else:
+            files_read[ticker]['puts'] = os.path.getmtime(f_path)
+
 master_data['Assigned'] = master_data.apply(is_assigned, axis=1)
 
-master_data.to_csv('master_data.csv')
+master_data.to_csv('latest_dump.csv')
+with open('maxTime.json', 'w') as f:
+    json.dump(files_read, f)
 #master_data.to_json('master_data.json')
