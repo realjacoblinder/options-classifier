@@ -96,6 +96,10 @@ for ticker in tqdm(ticker_list):
     for file in os.listdir(path+'/calls'):  
         # check filename against last pull date and hour for ticker      
         f_path = path+'/calls/'+file
+        if 'calls' in files_read[ticker]:
+            if files_read[ticker]['calls'] < os.path.getmtime(f_path):
+                continue
+                
         chain = pd.read_csv(f_path)
 
         chain = chain[['Contract Name','Strike', 'Last Trade Date', 'Pull Timestamp', 'Implied Volatility', 'Volume']]
@@ -138,6 +142,10 @@ for ticker in tqdm(ticker_list):
 
     for file in os.listdir(path+'/puts'):
         f_path = path+'/puts/'+file
+        
+        if 'puts' in files_read[ticker]:
+            if files_read[ticker]['puts'] > os.
+
         chain = pd.read_csv(f_path)
         chain = chain[['Contract Name','Strike', 'Last Trade Date', 'Pull Timestamp', 'Implied Volatility', 'Volume']]
         chain['Pull Timestamp'] = chain['Pull Timestamp'].apply(dp.parse)
