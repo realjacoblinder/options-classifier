@@ -56,10 +56,10 @@ for ticker in tickers:
     data['days_to_expiry'] = (data['expiry'] - datetime.today()).apply(lambda x: x.days + 1)
 
 
-    data = data[data['Volume'] != '-']
-    data = data[data['Open Interest'] != '-']
+    data['Volume'] = data['Volume'].apply(lambda x: '0' if x == '-' else x)
+    data['Open Interest'] = data['Open Interest'].apply(lambda x: '0' if x == '-' else x)
     data = data[data['Implied Volatility'] != '-']
-    data = data[data['% Change'] != '-']
+    data['% Change'] = data['% Change'].apply(lambda x: '0' if x == '-' else x)
     data = data[data['Last Trade Date'] != '-']
 
     try:
@@ -76,7 +76,7 @@ for ticker in tickers:
 
     data.rename(columns = {'% Change': 'pct_change', 'Contract Name':'contract_name', 'Last Trade Date':'last_trade_date', 'Strike':'strike',
     'Last Price':'last_price','Bid':'bid','Ask':'ask','Change':'change','Volume':'volume','Open Interest':'open_interest',
-    'Implied Volatility':'implied_volatility', }, inplace=True)
+    'Implied Volatility':'implied_volatility'}, inplace=True)
 
     data.to_sql(
         table_name,
