@@ -56,11 +56,16 @@ for ticker in tickers:
     data['days_to_expiry'] = (data['expiry'] - datetime.today()).apply(lambda x: x.days + 1)
 
 
-    data['Volume'] = data['Volume'].apply(lambda x: '0' if x == '-' else x)
+    data['Volume'] = data['Volume'].apply(lambda x: 0 if x == '-' else x)
     data['Open Interest'] = data['Open Interest'].apply(lambda x: '0' if x == '-' else x)
     data = data[data['Implied Volatility'] != '-']
     data['% Change'] = data['% Change'].apply(lambda x: '0' if x == '-' else x)
     data = data[data['Last Trade Date'] != '-']
+    
+    data['Ask'] = data['Ask'].apply(lambda x: 0 if type(x) != float and type(x) != int else float(x))
+    data['Bid'] = data['Bid'].apply(lambda x: 0 if type(x) != float and type(x) != int else float(x))
+    data['Change'] = data['Change'].apply(lambda x: 0 if type(x) != float and type(x) != int else float(x))
+    data['Last Price'] = data['Last Price'].apply(lambda x: 0 if type(x) != float and type(x) != int else float(x))
 
     try:
         close = get_stock_data(ticker, date.today(), index_as_date=False)['adjclose'][0]
@@ -89,7 +94,7 @@ for ticker in tickers:
             'last_trade_date':DateTime,
             'strike':Float,
             'last_price':Float,
-            'did':Float,
+            'bid':Float,
             'ask':Float,
             'change':Float,
             'pct_change':Float,

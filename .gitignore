@@ -5,3 +5,4 @@ master_data.json
 sync_imvol.sh
 lastest_dump.csv
 .env
+.ipynb_checkpoints/
