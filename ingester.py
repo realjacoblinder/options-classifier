@@ -49,7 +49,7 @@ for ticker in tqdm(ticker_list):
         expiry = get_expiry_from_name(data['Contract Name'][0], ticker)
         data['expiry'] = expiry
         data['days_to_expiry'] = data['expiry'] - data['Pull Timestamp']
-        data['days_to_expiry'] = data['days_to_expiry'].apply(lambda x: x.days)
+        data['days_to_expiry'] = data['days_to_expiry'].apply(lambda x: x.days+1)
 
         data['Volume'] = data['Volume'].apply(lambda x: 0 if x == '-' else x)
         data['Open Interest'] = data['Open Interest'].apply(lambda x: '0' if x == '-' else x)
